@@ -357,8 +357,7 @@ Full Stack Developer
 GitHub:
 https://github.com/yashsoni978
 
-LinkedIn:
-Add your LinkedIn profile here.
+
 
 ---
 
