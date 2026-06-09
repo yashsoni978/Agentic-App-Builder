@@ -10,7 +10,7 @@ Built with Next.js, Gemini AI, Supabase, Prisma, Clerk Authentication, and Sandp
 
 ## Live Demo
 
-https://your-vercel-url.vercel.app
+https://agentic-app-builder-two.vercel.app/
 
 ---
 
