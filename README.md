@@ -25,6 +25,27 @@ Inspired by modern AI development platforms such as Bolt.new, Lovable, and v0.
 
 ---
 
+## Screenshots
+
+### Landing Page
+
+![Agentic App Builder Preview](./public/preview.png)
+
+### Workspace
+
+![Agentic App Builder Preview](./public/workspace.png)
+
+### AI Agent
+
+![Agentic App Builder Preview](./public/agent.png)
+
+### Projects Dashboard
+
+![Agentic App Builder Preview](./public/project_dashboard.png)
+
+---
+
+
 ## Why I Built This
 
 I wanted to explore how modern AI-powered development tools work under the hood.
@@ -312,25 +333,6 @@ Implemented server-side credit validation and usage tracking for generation and 
 
 ---
 
-## Screenshots
-
-### Landing Page
-
-![Agentic App Builder Preview](./public/preview.png)
-
-### Workspace
-
-![Agentic App Builder Preview](./public/workspace.png)
-
-### AI Agent
-
-![Agentic App Builder Preview](./public/agent.png)
-
-### Projects Dashboard
-
-![Agentic App Builder Preview](./public/project_dashboard.png)
-
----
 
 ## Deployment
 
