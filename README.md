@@ -4,7 +4,7 @@ An AI-powered full-stack application builder that transforms natural language pr
 
 Built with Next.js, Gemini AI, Supabase, Prisma, Clerk Authentication, and Sandpack.
 
-![Agentic App Builder Preview](./public/logo-short.jpeg)
+![Agentic App Builder Preview](./public/preview.png)
 
 ---
 
