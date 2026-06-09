@@ -1,104 +1,173 @@
-# Full Stack Agentic App Builder with Next JS, Supabase, Gemini AI, Cline SDK, Shadcn UI Tutorial 🔥🔥
+# Agentic App Builder 🚀
 
-## https://www.youtube.com/watch?v=UUK93oW0SaA
+An AI-powered full-stack application builder that transforms natural language prompts into production-ready React applications with live preview, project persistence, autonomous AI improvements, and export functionality.
 
-<img width="1280" height="720" alt="1" src="https://github.com/user-attachments/assets/0170ace8-9451-40b0-8d8e-d5534a05bba1" />
+Built with Next.js, Gemini AI, Supabase, Prisma, Clerk Authentication, and Sandpack.
+
+![Agentic App Builder Preview](./public/preview.png)
 
 ---
 
-## 📋 Table of Contents
+## Live Demo
 
-- [Overview](#overview)
-- [Tech Stack](#tech-stack)
-- [Features](#features)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Database Setup](#database-setup)
+https://your-vercel-url.vercel.app
 
 ---
 
 ## Overview
 
-A full-stack AI-powered React app generator where users describe what they want to build, and the AI writes production-ready React code that renders live in the browser — just like Bolt.new or Lovable.
+Agentic App Builder enables users to generate complete React applications simply by describing what they want to build.
 
-Users get a live Sandpack preview, a persistent chat history, image upload support, and a credit-based subscription system. Pro users can trigger a Cline AI agent that autonomously improves the generated app file by file.
+The platform combines real-time AI code generation, live browser previews, project persistence, authentication, image uploads, and an autonomous AI agent capable of improving generated applications through iterative file-based modifications.
+
+Inspired by modern AI development platforms such as Bolt.new, Lovable, and v0.
 
 ---
 
-## Tech Stack
+## Why I Built This
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 15 (App Router, TypeScript) |
-| Auth + Billing | Clerk |
-| Database | Supabase (via Prisma) |
-| Image Storage | Supabase Storage |
-| Rate Limiting | Arcjet |
-| AI Model | Gemini 3.5 Flash |
-| AI Agent (Improve) | Cline SDK (`@cline/sdk`) |
-| Code Editor + Preview | Sandpack (`@codesandbox/sandpack-react`) |
-| Styling | Tailwind CSS v4 + Shadcn UI |
-| ORM | Prisma (Postgres adapter) |
+I wanted to explore how modern AI-powered development tools work under the hood.
+
+This project demonstrates:
+
+* Full-stack application architecture
+* AI-powered code generation
+* Streaming responses
+* Agentic workflows
+* Authentication and authorization
+* Database persistence
+* Real-time UI updates
+* Production deployment workflows
+
+The goal was to create a platform where users can generate, preview, improve, and export complete React applications using natural language prompts.
 
 ---
 
 ## Features
 
-### Landing Page
-- Prompt textarea with rotating placeholders and suggestion chips
-- Live browser mockup preview
-- Features section, how-it-works steps, pricing table (Clerk `<PricingTable />`)
-- Dark theme throughout
+### AI App Generation
 
-### Auth (Clerk)
-- Google OAuth sign-in
-- User auto-created in Supabase on first login with free credits
-- Plan detection via Clerk `has()` — credits top-up on plan upgrade
-- Pricing modal accessible from the header credit badge
+* Generate complete React applications from prompts
+* Real-time AI streaming responses
+* Structured code generation
+* Dependency validation
+* Automatic project naming
 
-### Workspace
-- Split-panel layout: Chat (left) + Code/Preview (right)
-- Full persistent chat history stored in Supabase
-- AI responses rendered with `react-markdown` and a live blinking cursor during streaming
-- Image upload via paperclip → Supabase Storage → CDN URL injected into prompt
-- Auto-scroll, hidden scrollbar, user avatars
+### Live Preview
 
-### AI Code Generation (`/api/gen-ai-code`)
-- Gemini 3.5 Flash with `thinkingConfig` enabled
-- Streams Gemini thought labels as live status steps in the chat panel
-- Returns strict JSON: `{ assistantMessage, title, files, dependencies }`
-- npm registry validation — hallucinated packages silently filtered
-- Atomic DB transaction: workspace upsert + credit deduction in one operation
+* Powered by Sandpack
+* Instant browser preview
+* File explorer
+* Code viewer
+* Error detection
 
-### Improve with AI — Cline SDK (`/api/improve`) — Pro + Starter
-- Cline `Agent` with two tools: `update_file` + `done_improving`
-- Agent streams reasoning live into the chat panel as it works
-- Files patched one at a time via SSE — Sandpack updates without remounting
-- `lifecycle: { completesRun: true }` ends the agent cleanly after all files are done
-- Gated to Starter and Pro plans
+### AI Agent Improvements
 
-### Fix with AI
-- Sandpack listens for runtime + compile errors
-- Error banner appears in Preview tab with "Fix with AI" button
-- Injects the error + context into Gemini and triggers a new generation
+* Improve existing applications using an autonomous AI agent
+* File-by-file updates
+* Live reasoning stream
+* Automatic project refinement
+* Real-time preview updates
 
-### Code Panel (Sandpack)
-- Preview and Code tabs — auto-switches to Preview after each generation
-- Built-in CodeMirror editor (read-only), file explorer
-- Tailwind v3 loaded via CDN inside the preview iframe
-- Smart re-keying: `SandpackProvider` only remounts when file paths change, not contents
-- Export to ZIP — downloads a ready-to-run CRA project with `package.json`
+### Authentication
 
-### Projects Page
-- Grid of all past workspaces with title, first prompt preview, message count, timestamp
-- Delete project with confirmation modal
-- Empty state with CTA
+* Clerk authentication
+* Google OAuth login
+* Protected routes
+* User-specific projects
 
-### Token / Credit System
-- Free: 10 credits · Starter: 50 · Pro: 150
-- Cost: 1 credit per generation or improve
-- Checked client-side and server-side (402 response as backup)
-- Credits top up additively on plan upgrade, preserved on downgrade
+### Project Management
+
+* Persistent workspace history
+* Save generated projects
+* Delete projects
+* Resume previous sessions
+
+### Image Upload Support
+
+* Upload screenshots or references
+* Store images in Supabase Storage
+* AI-assisted visual prompting
+
+### Credit System
+
+* Free Plan: 10 Credits
+* Starter Plan: 100 Credits
+* Pro Plan: 1000 Credits
+* Demo upgrade flow for recruiters
+* Server-side validation
+
+### Export Projects
+
+* Export generated projects as ZIP files
+* Ready-to-run React applications
+
+### Modern UI
+
+* Responsive design
+* Dark mode interface
+* Shadcn UI components
+* Tailwind CSS styling
+* Smooth animations
+
+---
+
+## Tech Stack
+
+### Frontend
+
+* Next.js 16
+* React
+* TypeScript
+* Tailwind CSS
+* Shadcn UI
+* Framer Motion
+* Sandpack
+
+### Backend
+
+* Next.js API Routes
+* Prisma ORM
+* PostgreSQL
+* Supabase
+
+### AI
+
+* Gemini 2.5 Flash
+* Cline SDK
+
+### Authentication
+
+* Clerk
+
+### Infrastructure
+
+* Supabase Storage
+* Arcjet Rate Limiting
+* Vercel Deployment
+
+---
+
+## Architecture
+
+```text
+User Prompt
+      │
+      ▼
+Gemini AI Generation
+      │
+      ▼
+Structured React Files
+      │
+      ▼
+Sandpack Preview
+      │
+      ▼
+Project Saved in Supabase
+      │
+      ▼
+Optional AI Agent Improvements
+```
 
 ---
 
@@ -106,39 +175,55 @@ Users get a live Sandpack preview, a persistent chat history, image upload suppo
 
 ### Prerequisites
 
-- Node.js 22+
-- A Supabase project
-- A Clerk application
-- A Google AI Studio API key (Gemini)
+* Node.js 22+
+* Supabase Account
+* Clerk Account
+* Google AI Studio API Key
 
 ### Installation
 
+Clone the repository:
+
 ```bash
-git clone https://github.com/roadsidecoder/buildai.git
-cd buildai
+git clone https://github.com/YOUR_USERNAME/agentic-app-builder.git
+cd agentic-app-builder
+```
+
+Install dependencies:
+
+```bash
 npm install
 ```
 
-Generate the Prisma client:
+Generate Prisma Client:
 
 ```bash
 npx prisma generate
+```
+
+Push schema:
+
+```bash
 npx prisma db push
 ```
 
-Run the development server:
+Start development server:
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open:
+
+```text
+http://localhost:3000
+```
 
 ---
 
 ## Environment Variables
 
-Create a `.env.local` file in the root:
+Create a `.env.local` file:
 
 ```env
 # Clerk
@@ -151,10 +236,10 @@ NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
-# Database (Supabase Postgres connection string)
+# Database
 DATABASE_URL=
 
-# Google Gemini
+# Gemini
 GEMINI_API_KEY=
 
 # Arcjet
@@ -163,26 +248,125 @@ ARCJET_KEY=
 
 ---
 
-## Database Setup
+## Database Schema
 
-The Prisma schema has two models:
+### User
 
-**User** — synced from Clerk on first login
+```text
+id
+clerkId
+name
+email
+imageUrl
+credits
+plan
+createdAt
+updatedAt
 ```
-id, clerkId, name, email, imageUrl, credits, plan, createdAt, updatedAt
-```
 
-**Workspace** — one per AI session
-```
-id, userId (FK), title, messages (JSON), fileData (JSON), createdAt, updatedAt
-```
+### Workspace
 
-`fileData` stores both generated files and validated dependencies as a single JSON blob.
-
-Supabase Storage bucket: `workspace-images` — public, organized by `userId/workspaceId/`.
+```text
+id
+userId
+title
+messages
+fileData
+createdAt
+updatedAt
+```
 
 ---
 
-## 🌟 Show your support
+## Key Technical Challenges
 
-Give a ⭐ if this project helped you learn something new!
+### Streaming AI Responses
+
+Implemented streaming responses from Gemini to provide a real-time user experience while generating code.
+
+### Agentic File Updates
+
+Built an autonomous AI workflow using Cline SDK that updates application files individually and streams progress back to the client.
+
+### Sandpack Synchronization
+
+Ensured code updates reflect instantly in the browser preview without unnecessary remounting.
+
+### Credit Management
+
+Implemented server-side credit validation and usage tracking for generation and improvement requests.
+
+---
+
+## Future Improvements
+
+* Multi-framework support
+* Team collaboration
+* Project templates
+* AI-generated backend APIs
+* GitHub integration
+* Deployment automation
+* Version history
+* Custom domains
+
+---
+
+## Screenshots
+
+### Landing Page
+
+Add screenshot here.
+
+### Workspace
+
+Add screenshot here.
+
+### AI Agent
+
+Add screenshot here.
+
+### Projects Dashboard
+
+Add screenshot here.
+
+---
+
+## Deployment
+
+Frontend and API:
+
+* Vercel
+
+Database:
+
+* Supabase
+
+Authentication:
+
+* Clerk
+
+---
+
+## Author
+
+### Yashwardhan Soni
+
+Full Stack Developer
+
+GitHub:
+https://github.com/yashsoni978
+
+LinkedIn:
+Add your LinkedIn profile here.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
+
+---
+
+## Support
+
+If you found this project useful, consider giving it a ⭐ on GitHub.
