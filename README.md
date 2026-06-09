@@ -6,6 +6,7 @@ Built with Next.js, Gemini AI, Supabase, Prisma, Clerk Authentication, and Sandp
 
 ![Agentic App Builder Preview](./public/preview.png)
 
+
 ---
 
 ## Live Demo
@@ -315,19 +316,19 @@ Implemented server-side credit validation and usage tracking for generation and 
 
 ### Landing Page
 
-./public/preview.png
+![Agentic App Builder Preview](./public/preview.png)
 
 ### Workspace
 
-./public/workspace.png
+![Agentic App Builder Preview](./public/workspace.png)
 
 ### AI Agent
 
-./public/agent.png
+![Agentic App Builder Preview](./public/agent.png)
 
 ### Projects Dashboard
 
-./public/project_dashboard.png
+![Agentic App Builder Preview](./public/project_dashboard.png)
 
 ---
 
