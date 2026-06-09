@@ -315,19 +315,19 @@ Implemented server-side credit validation and usage tracking for generation and 
 
 ### Landing Page
 
-Add screenshot here.
+./public/preview.png
 
 ### Workspace
 
-Add screenshot here.
+./public/workspace.png
 
 ### AI Agent
 
-Add screenshot here.
+./public/agent.png
 
 ### Projects Dashboard
 
-Add screenshot here.
+./public/project_dashboard.png
 
 ---
 
