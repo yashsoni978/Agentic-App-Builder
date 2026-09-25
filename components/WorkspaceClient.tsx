@@ -54,12 +54,15 @@ export function WorkspaceClient({
   const [workspaceId, setWorkspaceId] = useState<string | null>(
     workspace?.id ?? null
   );
+
   const [messages, setMessages] = useState<Message[]>(
     parseMessages(workspace?.messages)
   );
+
   const [fileData, setFileData] = useState<FileData | null>(
     parseFileData(workspace?.fileData)
   );
+
   const [credits, setCredits] = useState(userCredits);
   const [isGenerating, setIsGenerating] = useState(false);
   const [statusLog, setStatusLog] = useState<StatusStep[]>([]);
@@ -71,11 +74,13 @@ export function WorkspaceClient({
 
   // Refs to avoid stale closures in callbacks
   const messagesRef = useRef<Message[]>(messages);
+
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
 
   const workspaceIdRef = useRef<string | null>(workspaceId);
+
   useEffect(() => {
     workspaceIdRef.current = workspaceId;
   }, [workspaceId]);
@@ -83,6 +88,7 @@ export function WorkspaceClient({
   // fileData ref — so handleImprove never closes over stale fileData
   // even as file_patch events stream in
   const fileDataRef = useRef<FileData | null>(fileData);
+
   useEffect(() => {
     fileDataRef.current = fileData;
   }, [fileData]);
@@ -90,7 +96,9 @@ export function WorkspaceClient({
   const pushStep = (label: string) => {
     setStatusLog((prev) => [
       ...prev.map((s, i) =>
-        i === prev.length - 1 ? { ...s, status: "done" as const } : s
+        i === prev.length - 1
+          ? { ...s, status: "done" as const }
+          : s
       ),
       { label, status: "running" as const },
     ]);
@@ -99,7 +107,9 @@ export function WorkspaceClient({
   const completeSteps = () => {
     setStatusLog((prev) =>
       prev.map((s, i) =>
-        i === prev.length - 1 ? { ...s, status: "done" as const } : s
+        i === prev.length - 1
+          ? { ...s, status: "done" as const }
+          : s
       )
     );
   };
@@ -131,7 +141,9 @@ export function WorkspaceClient({
 
         const res = await fetch("/api/gen-ai-code", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+          },
           signal: abortController.signal,
           body: JSON.stringify({
             workspaceId: currentWorkspaceId,
@@ -145,40 +157,107 @@ export function WorkspaceClient({
           setMessages((prev) => prev.slice(0, -1));
           return;
         }
+
         if (res.status === 429) {
           toast.error("Too many requests. Please slow down.");
           setMessages((prev) => prev.slice(0, -1));
           return;
         }
-        if (!res.ok || !res.body) throw new Error("Generation failed");
+
+        if (!res.ok || !res.body) {
+          throw new Error("Generation failed");
+        }
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
+
         let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+
+          /*
+           * IMPORTANT:
+           * When the stream finishes, there can still be an SSE event
+           * sitting inside `buffer`. The old code immediately broke here,
+           * which could cause the final `done` event to never be processed.
+           */
+          if (done) {
+            if (buffer.trim()) {
+              const remainingLines = buffer.split("\n\n");
+
+              for (const line of remainingLines) {
+                if (!line.startsWith("data: ")) continue;
+
+                try {
+                  const event = JSON.parse(line.slice(6));
+
+                  if (event.type === "status") {
+                    pushStep(event.message);
+                  } else if (event.type === "done") {
+                    completeSteps();
+
+                    setWorkspaceId(event.workspaceId);
+                    setFileData(event.fileData);
+                    setCredits(event.creditsRemaining);
+
+                    setMessages((prev) => [
+                      ...prev,
+                      {
+                        role: "assistant",
+                        content: event.assistantMessage,
+                      },
+                    ]);
+
+                    window.history.replaceState(
+                      null,
+                      "",
+                      `/workspace?id=${event.workspaceId}`
+                    );
+                  } else if (event.type === "error") {
+                    throw new Error(event.message);
+                  }
+                } catch (err) {
+                  console.error(
+                    "SSE event processing error:",
+                    err
+                  );
+                }
+              }
+            }
+
+            break;
+          }
 
           buffer += decoder.decode(value, { stream: true });
+
           const lines = buffer.split("\n\n");
+
           buffer = lines.pop() ?? "";
 
           for (const line of lines) {
             if (!line.startsWith("data: ")) continue;
+
             try {
               const event = JSON.parse(line.slice(6));
+
               if (event.type === "status") {
                 pushStep(event.message);
               } else if (event.type === "done") {
                 completeSteps();
+
                 setWorkspaceId(event.workspaceId);
                 setFileData(event.fileData);
                 setCredits(event.creditsRemaining);
+
                 setMessages((prev) => [
                   ...prev,
-                  { role: "assistant", content: event.assistantMessage },
+                  {
+                    role: "assistant",
+                    content: event.assistantMessage,
+                  },
                 ]);
+
                 window.history.replaceState(
                   null,
                   "",
@@ -187,8 +266,11 @@ export function WorkspaceClient({
               } else if (event.type === "error") {
                 throw new Error(event.message);
               }
-            } catch {
-              // skip malformed SSE lines
+            } catch (err) {
+              console.error(
+                "SSE event processing error:",
+                err
+              );
             }
           }
         }
@@ -198,10 +280,15 @@ export function WorkspaceClient({
           setMessages((prev) => prev.slice(0, -1));
           return;
         }
+
         console.error(err);
+
         toast.error(
-          err instanceof Error ? err.message : "Something went wrong."
+          err instanceof Error
+            ? err.message
+            : "Something went wrong."
         );
+
         setMessages((prev) => prev.slice(0, -1));
       } finally {
         generateAbortRef.current = null;
@@ -209,6 +296,7 @@ export function WorkspaceClient({
         setStatusLog([]);
       }
     },
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [credits, isGenerating, userId]
     // fileData intentionally omitted — read via fileDataRef
@@ -222,14 +310,21 @@ export function WorkspaceClient({
 
       // Read fileData from ref — never stale, never causes recreating this fn
       const currentFileData = fileDataRef.current;
+
       if (!currentFileData) return;
 
       setIsImproving(true);
 
       setMessages((prev) => [
         ...prev,
-        { role: "user", content: userRequest },
-        { role: "assistant", content: "" }, // placeholder, updated live
+        {
+          role: "user",
+          content: userRequest,
+        },
+        {
+          role: "assistant",
+          content: "",
+        },
       ]);
 
       // Create a fresh AbortController for this request
@@ -239,7 +334,9 @@ export function WorkspaceClient({
       try {
         const res = await fetch("/api/improve", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+          },
           signal: abortController.signal,
           body: JSON.stringify({
             userId,
@@ -253,71 +350,156 @@ export function WorkspaceClient({
           toast.error(
             "Upgrade to Starter or Pro to use Improve with Forge Agent."
           );
+
           setMessages((prev) => prev.slice(0, -2));
           return;
         }
+
         if (res.status === 402) {
           toast.error("Not enough credits.");
           setMessages((prev) => prev.slice(0, -2));
           return;
         }
-        if (!res.ok || !res.body) throw new Error("Improve failed");
+
+        if (!res.ok || !res.body) {
+          throw new Error("Improve failed");
+        }
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
+
         let buffer = "";
         let accumulatedThinking = "";
 
         // Accumulate patches locally — only apply to state at done.
         // Applying on every file_patch event would update fileData state,
         // which feeds into SandpackProvider and can cause remounts mid-stream.
-        const localPatches: Record<string, { code: string }> = {};
+        const localPatches: Record<
+          string,
+          { code: string }
+        > = {};
 
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
+          /*
+           * IMPORTANT:
+           * Process the final SSE data remaining in `buffer`
+           * before leaving the stream.
+           */
+          if (done) {
+            if (buffer.trim()) {
+              const remainingLines = buffer.split("\n\n");
+
+              for (const line of remainingLines) {
+                if (!line.startsWith("data: ")) continue;
+
+                try {
+                  const event = JSON.parse(line.slice(6));
+
+                  if (event.type === "thinking") {
+                    accumulatedThinking += event.text;
+
+                    setMessages((prev) => {
+                      const updated = [...prev];
+
+                      updated[updated.length - 1] = {
+                        role: "assistant",
+                        content: accumulatedThinking,
+                      };
+
+                      return updated;
+                    });
+                  } else if (event.type === "file_patch") {
+                    localPatches[event.path] = {
+                      code: event.code,
+                    };
+                  } else if (event.type === "done") {
+                    setFileData(event.fileData);
+                    setCredits(event.creditsRemaining);
+
+                    setMessages((prev) => {
+                      const updated = [...prev];
+
+                      updated[updated.length - 1] = {
+                        role: "assistant",
+                        content: event.summary,
+                      };
+
+                      return updated;
+                    });
+                  } else if (event.type === "error") {
+                    throw new Error(event.message);
+                  }
+                } catch (err) {
+                  console.error(
+                    "Improve SSE event processing error:",
+                    err
+                  );
+                }
+              }
+            }
+
+            break;
+          }
+
+          buffer += decoder.decode(value, {
+            stream: true,
+          });
+
           const lines = buffer.split("\n\n");
+
           buffer = lines.pop() ?? "";
 
           for (const line of lines) {
             if (!line.startsWith("data: ")) continue;
+
             try {
               const event = JSON.parse(line.slice(6));
 
               if (event.type === "thinking") {
                 // Stream agent reasoning into the placeholder assistant message
                 accumulatedThinking += event.text;
+
                 setMessages((prev) => {
                   const updated = [...prev];
+
                   updated[updated.length - 1] = {
                     role: "assistant",
                     content: accumulatedThinking,
                   };
+
                   return updated;
                 });
               } else if (event.type === "file_patch") {
                 // Accumulate locally — don't touch state yet
-                localPatches[event.path] = { code: event.code };
+                localPatches[event.path] = {
+                  code: event.code,
+                };
               } else if (event.type === "done") {
                 // Apply all patches at once now that the stream is complete
                 setFileData(event.fileData);
                 setCredits(event.creditsRemaining);
+
                 // Replace thinking text with clean summary
                 setMessages((prev) => {
                   const updated = [...prev];
+
                   updated[updated.length - 1] = {
                     role: "assistant",
                     content: event.summary,
                   };
+
                   return updated;
                 });
               } else if (event.type === "error") {
                 throw new Error(event.message);
               }
-            } catch {
-              // skip malformed SSE lines
+            } catch (err) {
+              console.error(
+                "Improve SSE event processing error:",
+                err
+              );
             }
           }
         }
@@ -327,13 +509,20 @@ export function WorkspaceClient({
           setMessages((prev) => prev.slice(0, -2));
           return;
         }
-        toast.error(err instanceof Error ? err.message : "Improve failed.");
+
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "Improve failed."
+        );
+
         setMessages((prev) => prev.slice(0, -2));
       } finally {
         improveAbortRef.current = null;
         setIsImproving(false);
       }
     },
+
     // fileData intentionally omitted — read via fileDataRef above
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [credits, isGenerating, isImproving, userId]
@@ -373,7 +562,9 @@ export function WorkspaceClient({
           workspaceId={workspaceId}
           appTitle={fileData?.title ?? workspace?.title ?? null}
         />
+
         <div className="w-px shrink-0 bg-white/6" />
+
         <CodePanel
           fileData={fileData}
           isGenerating={isGenerating}
