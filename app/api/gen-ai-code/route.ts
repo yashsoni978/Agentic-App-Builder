@@ -36,18 +36,26 @@ async function validateDependencies(
   deps: Record<string, string>
 ): Promise<Record<string, string>> {
   const valid: Record<string, string> = {};
+
   await Promise.all(
     Object.entries(deps).map(async ([pkg, version]) => {
       try {
-        const res = await fetch(`https://registry.npmjs.org/${pkg}/latest`, {
-          signal: AbortSignal.timeout(1500),
-        });
-        if (res.ok) valid[pkg] = version;
+        const res = await fetch(
+          `https://registry.npmjs.org/${pkg}/latest`,
+          {
+            signal: AbortSignal.timeout(1500),
+          }
+        );
+
+        if (res.ok) {
+          valid[pkg] = version;
+        }
       } catch {
         // silently skip hallucinated packages
       }
     })
   );
+
   return valid;
 }
 
@@ -55,6 +63,7 @@ async function validateDependencies(
 
 function trimHistory(messages: Message[]): Message[] {
   if (messages.length <= 10) return messages;
+
   return [messages[0], ...messages.slice(-8)];
 }
 
@@ -85,9 +94,13 @@ RULES:
 9. Keep code clean, readable, and production-quality.
 10. If the user attaches an image, use it as a design reference and match the layout/style as closely as possible.`;
 
+
 // ─── Gemini contents builder ──────────────────────────────────────────────────
 
-function buildContents(messages: Message[], fileData: FileData | null) {
+function buildContents(
+  messages: Message[],
+  fileData: FileData | null
+) {
   const trimmed = trimHistory(messages);
 
   return trimmed.map((msg, idx) => {
@@ -103,6 +116,7 @@ function buildContents(messages: Message[], fileData: FileData | null) {
       }
 
       const isLast = idx === trimmed.length - 1;
+
       if (isLast && fileData) {
         text +=
           "\n\nCurrent project files for context:\n" +
@@ -110,23 +124,38 @@ function buildContents(messages: Message[], fileData: FileData | null) {
       }
 
       parts.push({ text });
+
       return { role, parts };
     }
 
-    return { role, parts: [{ text: msg.content }] };
+    return {
+      role,
+      parts: [{ text: msg.content }],
+    };
   });
 }
+
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   const { userId: clerkId } = await auth();
+
   if (!clerkId) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+    return Response.json(
+      { message: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
   const body = await request.json();
-  const { workspaceId, userId, messages, fileData } = body as {
+
+  const {
+    workspaceId,
+    userId,
+    messages,
+    fileData,
+  } = body as {
     workspaceId: string | null;
     userId: string;
     messages: Message[];
@@ -134,7 +163,10 @@ export async function POST(request: NextRequest) {
   };
 
   if (!messages?.length) {
-    return Response.json({ message: "No messages provided" }, { status: 400 });
+    return Response.json(
+      { message: "No messages provided" },
+      { status: 400 }
+    );
   }
 
   // ── Arcjet: rate limit, prompt injection, sensitive info ──────────────────
@@ -148,6 +180,7 @@ export async function POST(request: NextRequest) {
 
   // const lastUserMessage =
   //   [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
+
   // const decision = await aj.protect(arcjetReq, {
   //   requested: 1,
   //   userId: clerkId,
@@ -162,14 +195,28 @@ export async function POST(request: NextRequest) {
   // }
 
   const user = await db.user.findUnique({
-    where: { id: userId, clerkId },
-    select: { id: true, credits: true },
+    where: {
+      id: userId,
+      clerkId,
+    },
+    select: {
+      id: true,
+      credits: true,
+    },
   });
 
-  if (!user)
-    return Response.json({ message: "User not found" }, { status: 404 });
+  if (!user) {
+    return Response.json(
+      { message: "User not found" },
+      { status: 404 }
+    );
+  }
+
   if (user.credits < CREDIT_COST_PER_GENERATION) {
-    return Response.json({ message: "Insufficient credits" }, { status: 402 });
+    return Response.json(
+      { message: "Insufficient credits" },
+      { status: 402 }
+    );
   }
 
   const encoder = new TextEncoder();
@@ -180,26 +227,31 @@ export async function POST(request: NextRequest) {
         controller.enqueue(encoder.encode(chunk));
 
       try {
-        const contents = buildContents(messages, fileData);
+        const contents = buildContents(
+          messages,
+          fileData
+        );
 
-        const geminiStream = await ai.models.generateContentStream({
-          model:"gemini-2.5-flash-lite",
-          contents,
-          config: {
-            systemInstruction: SYSTEM_PROMPT,
-            temperature: 0.7,
-            responseMimeType: "application/json",
-            thinkingConfig: {
-              includeThoughts: true,
+        const geminiStream =
+          await ai.models.generateContentStream({
+            model: "gemini-2.5-flash-lite",
+            contents,
+            config: {
+              systemInstruction: SYSTEM_PROMPT,
+              temperature: 0.7,
+              responseMimeType: "application/json",
+              thinkingConfig: {
+                includeThoughts: true,
+              },
             },
-          },
-        });
+          });
 
         let accumulated = ""; // final JSON output
         let lastEmitTime = 0; // throttle thought emissions
 
         for await (const chunk of geminiStream) {
-          const parts = chunk.candidates?.[0]?.content?.parts ?? [];
+          const parts =
+            chunk.candidates?.[0]?.content?.parts ?? [];
 
           for (const part of parts) {
             if (!part.text) continue;
@@ -207,10 +259,19 @@ export async function POST(request: NextRequest) {
             if (part.thought) {
               // Extract just the short label — not the full wall of text
               const now = Date.now();
+
               if (now - lastEmitTime > 600) {
-                const label = extractThoughtLabel(part.text);
+                const label = extractThoughtLabel(
+                  part.text
+                );
+
                 if (label) {
-                  enqueue(sseEvent("status", { message: label }));
+                  enqueue(
+                    sseEvent("status", {
+                      message: label,
+                    })
+                  );
+
                   lastEmitTime = now;
                 }
               }
@@ -233,11 +294,18 @@ export async function POST(request: NextRequest) {
         try {
           parsed = JSON.parse(accumulated);
         } catch {
+          console.error(
+            "[gen-ai-code] Invalid JSON from Gemini:",
+            accumulated
+          );
+
           enqueue(
             sseEvent("error", {
-              message: "AI returned invalid JSON. Please try again.",
+              message:
+                "AI returned invalid JSON. Please try again.",
             })
           );
+
           controller.close();
           return;
         }
@@ -252,17 +320,28 @@ export async function POST(request: NextRequest) {
         if (!files || typeof files !== "object") {
           enqueue(
             sseEvent("error", {
-              message: "AI response missing files. Please try again.",
+              message:
+                "AI response missing files. Please try again.",
             })
           );
+
           controller.close();
           return;
         }
 
         // ── Validate npm packages ──────────────────────────────────────────────
 
-        enqueue(sseEvent("status", { message: "Validating packages…" }));
-        const validatedDeps = await validateDependencies(dependencies ?? {});
+        enqueue(
+          sseEvent("status", {
+            message: "Validating packages…",
+          })
+        );
+
+        const validatedDeps =
+          await validateDependencies(
+            dependencies ?? {}
+          );
+
         const newFileData: FileData = {
           files,
           dependencies: validatedDeps,
@@ -271,41 +350,76 @@ export async function POST(request: NextRequest) {
 
         // ── Upsert workspace + deduct credit (single transaction) ──────────────
 
-        enqueue(sseEvent("status", { message: "Saving…" }));
+        enqueue(
+          sseEvent("status", {
+            message: "Saving…",
+          })
+        );
 
-        const lastUserMessage = messages[messages.length - 1];
+        const lastUserMessage =
+          messages[messages.length - 1];
+
         const updatedMessages: Message[] = [
           ...messages,
-          { role: "assistant", content: assistantMessage },
+          {
+            role: "assistant",
+            content: assistantMessage,
+          },
         ];
 
-        const [workspace] = await db.$transaction([
-          workspaceId
-            ? db.workspace.update({
-                where: { id: workspaceId, userId },
-                data: {
-                  messages: updatedMessages as never,
-                  fileData: newFileData as never,
-                },
-              })
-            : db.workspace.create({
-                data: {
-                  userId,
-                  title: aiTitle ?? lastUserMessage.content.slice(0, 80),
-                  messages: updatedMessages as never,
-                  fileData: newFileData as never,
-                },
-              }),
-          db.user.update({
-            where: { id: userId },
-            data: { credits: { decrement: CREDIT_COST_PER_GENERATION } },
-          }),
-        ]);
+        const [workspace] =
+          await db.$transaction([
+            workspaceId
+              ? db.workspace.update({
+                  where: {
+                    id: workspaceId,
+                    userId,
+                  },
+                  data: {
+                    messages:
+                      updatedMessages as never,
+                    fileData:
+                      newFileData as never,
+                  },
+                })
+              : db.workspace.create({
+                  data: {
+                    userId,
+                    title:
+                      aiTitle ??
+                      lastUserMessage.content.slice(
+                        0,
+                        80
+                      ),
+                    messages:
+                      updatedMessages as never,
+                    fileData:
+                      newFileData as never,
+                  },
+                }),
 
-        const updatedUser = await db.user.findUnique({
-          where: { id: userId },
-          select: { credits: true },
-        });
+            db.user.update({
+              where: {
+                id: userId,
+              },
+              data: {
+                credits: {
+                  decrement:
+                    CREDIT_COST_PER_GENERATION,
+                },
+              },
+            }),
+          ]);
+
+        const updatedUser =
+          await db.user.findUnique({
+            where: {
+              id: userId,
+            },
+            select: {
+              credits: true,
+            },
+          });
 
         // ── Emit final result ──────────────────────────────────────────────────
 
@@ -315,14 +429,34 @@ export async function POST(request: NextRequest) {
             assistantMessage,
             fileData: newFileData,
             creditsRemaining:
-              updatedUser?.credits ?? user.credits - CREDIT_COST_PER_GENERATION,
+              updatedUser?.credits ??
+              user.credits -
+                CREDIT_COST_PER_GENERATION,
           })
         );
       } catch (err) {
-        console.error("[gen-ai-code] stream error:", err);
+        // IMPORTANT:
+        // Do not hide the actual error anymore.
+        // This lets us see whether the failure comes from
+        // Gemini, npm validation, Prisma, or another operation.
+
+        console.error(
+          "[gen-ai-code] stream error:",
+          err
+        );
+
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : typeof err === "string"
+              ? err
+              : JSON.stringify(err);
+
         enqueue(
           sseEvent("error", {
-            message: "Something went wrong. Please try again.",
+            message:
+              errorMessage ||
+              "Something went wrong. Please try again.",
           })
         );
       } finally {
